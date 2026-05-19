@@ -47,27 +47,11 @@
 </head>
 <body class="text-gray-800 h-screen flex overflow-hidden">
 
-    <!-- Sidebar -->
-    <aside class="w-64 bg-slate-900 text-white flex flex-col hidden md:flex">
-        <div class="p-6 text-center border-b border-slate-700">
-            <div class="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-3 shadow-lg">
-                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
-            </div>
-            <h1 class="text-xl font-semibold tracking-wide">Data Dashboard</h1>
-            <p class="text-xs text-slate-400 mt-1">Prepared for คุณกฤษฏ์</p>
-        </div>
-        <div class="p-4 flex-grow flex flex-col justify-end">
-            <div class="text-xs text-slate-400 mt-4 text-center">
-                <p>Designed by ยุพิน</p>
-            </div>
-        </div>
-    </aside>
-
     <!-- Main Content -->
     <main class="flex-1 flex flex-col h-screen overflow-y-auto bg-slate-50">
         
         <!-- Header -->
-        <header class="bg-white shadow-sm px-8 py-4 flex justify-between items-center z-10 sticky top-0">
+        <header class="bg-white shadow-sm px-8 py-4 flex justify-between items-center z-50 sticky top-0">
             <h2 class="text-2xl font-semibold text-slate-800">รายงานปริมาณและยอดเงินการเบิกใช้</h2>
             <div class="flex items-center gap-3">
                 <span class="text-sm text-slate-500" id="lastUpdated">สถานะ: รออัปโหลดข้อมูล</span>
@@ -76,7 +60,7 @@
 
         <div class="p-8">
             <!-- Upload Section (Moved for better visibility) -->
-            <div class="glass-card p-6 mb-8 relative z-20 flex flex-col md:flex-row items-center justify-between gap-4 border-l-4 border-blue-500 bg-white">
+            <div class="glass-card p-6 mb-8 relative z-30 flex flex-col md:flex-row items-center justify-between gap-4 border-l-4 border-blue-500 bg-white">
                 <div>
                     <h3 class="text-lg font-medium text-slate-800">อัปโหลดไฟล์ข้อมูล (CSV / Excel)</h3>
                     <p class="text-sm text-slate-500">กรุณาเลือกไฟล์ข้อมูลเพื่อแสดงผลใน Dashboard ค่ะ</p>
@@ -87,7 +71,7 @@
             </div>
 
             <!-- Filters Section -->
-            <div class="glass-card p-6 mb-8 relative z-20">
+            <div class="glass-card p-6 mb-8 relative z-40">
                 <h3 class="text-lg font-medium text-slate-700 mb-4 flex items-center gap-2">
                     <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path></svg>
                     ตัวกรองข้อมูล (Multi-select)
@@ -149,7 +133,7 @@
             </div>
 
             <!-- Charts Grid -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 relative z-10">
                 <!-- Main Comparison Chart -->
                 <div class="glass-card p-6 lg:col-span-2">
                     <h3 class="text-lg font-medium text-slate-700 mb-4">เปรียบเทียบจำนวนและยอดเงินรายเดือน</h3>
@@ -184,7 +168,7 @@
             </div>
 
             <!-- Data Table Section -->
-            <div class="glass-card p-6 mb-8 overflow-hidden flex flex-col">
+            <div class="glass-card p-6 mb-8 overflow-hidden flex flex-col relative z-10">
                 <h3 class="text-lg font-medium text-slate-700 mb-4">สรุปข้อมูลการเบิกใช้</h3>
                 <div class="overflow-x-auto">
                     <table class="min-w-full divide-y divide-slate-200">
@@ -207,7 +191,7 @@
             </div>
 
             <!-- New Detailed Item Table Section -->
-            <div class="glass-card p-6 mb-8 overflow-hidden flex flex-col">
+            <div class="glass-card p-6 mb-8 overflow-hidden flex flex-col relative z-10">
                 <h3 class="text-lg font-medium text-slate-700 mb-4 flex items-center gap-2">
                     <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
                     รายละเอียดรายการที่เบิก

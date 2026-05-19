@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard รายงานการเบิกใช้ - By ยุพิน</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Chart.js DataLabels Plugin -->
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
+    
+    <!-- PapaParse for CSV parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+
+    <!-- SheetJS for Excel parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <!-- Choices.js for beautiful Multi-select -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+
+    <!-- Font (Kanit) -->
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'Kanit', sans-serif; background-color: #f3f4f6; }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .choices__inner { border-radius: 0.5rem; background-color: #f9fafb; border: 1px solid #e5e7eb; min-height: 44px;}
+        .choices__list--multiple .choices__item { background-color: #3b82f6; border: 1px solid #2563eb; border-radius: 4px; }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="text-gray-800 h-screen flex overflow-hidden">
+
+    <!-- Sidebar -->
+    <aside class="w-64 bg-slate-900 text-white flex flex-col hidden md:flex">
+        <div class="p-6 text-center border-b border-slate-700">
+            <div class="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-3 shadow-lg">
+                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+            </div>
+            <h1 class="text-xl font-semibold tracking-wide">Data Dashboard</h1>
+            <p class="text-xs text-slate-400 mt-1">Prepared for คุณกฤษฏ์</p>
+        </div>
+        <div class="p-4 flex-grow flex flex-col justify-end">
+            <div class="text-xs text-slate-400 mt-4 text-center">
+                <p>Designed by ยุพิน</p>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col h-screen overflow-y-auto bg-slate-50">
+        
+        <!-- Header -->
+        <header class="bg-white shadow-sm px-8 py-4 flex justify-between items-center z-10 sticky top-0">
+            <h2 class="text-2xl font-semibold text-slate-800">รายงานปริมาณและยอดเงินการเบิกใช้</h2>
+            <div class="flex items-center gap-3">
+                <span class="text-sm text-slate-500" id="lastUpdated">สถานะ: รออัปโหลดข้อมูล</span>
+            </div>
+        </header>
+
+        <div class="p-8">
+            <!-- Upload Section (Moved for better visibility) -->
+            <div class="glass-card p-6 mb-8 relative z-20 flex flex-col md:flex-row items-center justify-between gap-4 border-l-4 border-blue-500 bg-white">
+                <div>
+                    <h3 class="text-lg font-medium text-slate-800">อัปโหลดไฟล์ข้อมูล (CSV / Excel)</h3>
+                    <p class="text-sm text-slate-500">กรุณาเลือกไฟล์ข้อมูลเพื่อแสดงผลใน Dashboard ค่ะ</p>
+                </div>
+                <div class="w-full md:w-auto bg-slate-50 p-2 rounded-full border border-slate-200 shadow-sm">
+                    <input type="file" id="csvFileInput" accept=".csv, .xlsx, .xls" class="block w-full text-sm text-slate-600 file:mr-4 file:py-2 file:px-6 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700 cursor-pointer transition-all">
+                </div>
+            </div>
+
+            <!-- Filters Section -->
+            <div class="glass-card p-6 mb-8 relative z-20">
+                <h3 class="text-lg font-medium text-slate-700 mb-4 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path></svg>
+                    ตัวกรองข้อมูล (Multi-select)
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-5 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-600 mb-2">เลือกปี (Year)</label>
+                        <select id="filterYear" multiple></select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-600 mb-2">เลือกเดือน (Month)</label>
+                        <select id="filterMonth" multiple></select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-600 mb-2">เลือกแผนก (Dept)</label>
+                        <select id="filterDept" multiple></select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-600 mb-2">เลือกผู้เบิก (Requester)</label>
+                        <select id="filterRequester" multiple></select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-600 mb-2">สถานะ (Status)</label>
+                        <select id="filterStatus" multiple></select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- KPI Cards Container -->
+            <div class="glass-card p-6 mb-8 relative z-20">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-medium text-slate-700 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                        สรุปยอดการเบิกใช้
+                    </h3>
+                    <span id="kpiYearLabel" class="text-sm text-slate-500 bg-slate-100 px-3 py-1 rounded-full hidden">หลายปี</span>
+                </div>
+
+                <!-- Main Totals (Always visible) -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-2">
+                    <div class="bg-blue-50/50 rounded-xl p-5 border border-blue-100 flex flex-col justify-center">
+                        <p class="text-sm font-medium text-slate-500 mb-1">จำนวนรายการเบิก</p>
+                        <h3 class="text-3xl font-bold text-slate-800" id="kpiMainCount">0 <span class="text-sm font-normal text-slate-500">รายการ</span></h3>
+                    </div>
+                    <div class="bg-emerald-50/50 rounded-xl p-5 border border-emerald-100 flex flex-col justify-center">
+                        <p class="text-sm font-medium text-slate-500 mb-1">จำนวนเบิกรวม</p>
+                        <h3 class="text-3xl font-bold text-slate-800" id="kpiMainQty">0 <span class="text-sm font-normal text-slate-500">หน่วย</span></h3>
+                    </div>
+                    <div class="bg-rose-50/50 rounded-xl p-5 border border-rose-100 flex flex-col justify-center">
+                        <p class="text-sm font-medium text-slate-500 mb-1">ยอดเงินรวม</p>
+                        <h3 class="text-3xl font-bold text-slate-800" id="kpiMainAmount">0 <span class="text-sm font-normal text-slate-500">บาท</span></h3>
+                    </div>
+                </div>
+
+                <!-- Yearly Breakdown (Compact Grid, only shows if multiple years exist) -->
+                <div id="kpiYearlyBreakdown" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 hidden border-t border-slate-100 pt-4 mt-4">
+                    <!-- JS Injects Here -->
+                </div>
+            </div>
+
+            <!-- Charts Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <!-- Main Comparison Chart -->
+                <div class="glass-card p-6 lg:col-span-2">
+                    <h3 class="text-lg font-medium text-slate-700 mb-4">เปรียบเทียบจำนวนและยอดเงินรายเดือน</h3>
+                    <div class="h-80 w-full relative">
+                        <canvas id="monthlyChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- YoY Chart -->
+                <div class="glass-card p-6 lg:col-span-2">
+                    <h3 class="text-lg font-medium text-slate-700 mb-4">กราฟเปรียบเทียบยอดเงินแบบปีต่อปี (YOY)</h3>
+                    <div class="h-80 w-full relative">
+                        <canvas id="yoyChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Proportion Chart 1 -->
+                <div class="glass-card p-6 lg:col-span-1">
+                    <h3 class="text-lg font-medium text-slate-700 mb-4">สัดส่วนจำนวนการเบิก (แยกตามแผนก)</h3>
+                    <div class="h-64 relative flex justify-center">
+                        <canvas id="qtyPieChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Proportion Chart 2 -->
+                <div class="glass-card p-6 lg:col-span-1">
+                    <h3 class="text-lg font-medium text-slate-700 mb-4">สัดส่วนยอดเงินการเบิก (แยกตามแผนก)</h3>
+                    <div class="h-64 relative flex justify-center">
+                        <canvas id="amountPieChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Data Table Section -->
+            <div class="glass-card p-6 mb-8 overflow-hidden flex flex-col">
+                <h3 class="text-lg font-medium text-slate-700 mb-4">สรุปข้อมูลการเบิกใช้</h3>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-slate-200">
+                        <thead class="bg-slate-50">
+                            <tr>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">แผนก (Dept)</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">ผู้เบิก (Requester)</th>
+                                <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">จำนวนครั้ง</th>
+                                <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">จำนวนรวม (หน่วย)</th>
+                                <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">ยอดเงินรวม (บาท)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody" class="bg-white divide-y divide-slate-200">
+                            <tr>
+                                <td colspan="5" class="px-6 py-10 text-center text-slate-500">กรุณาอัปโหลดไฟล์ CSV หรือ Excel เพื่อแสดงข้อมูล</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- New Detailed Item Table Section -->
+            <div class="glass-card p-6 mb-8 overflow-hidden flex flex-col">
+                <h3 class="text-lg font-medium text-slate-700 mb-4 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
+                    รายละเอียดรายการที่เบิก
+                </h3>
+                <div class="overflow-x-auto max-h-[500px]">
+                    <table class="min-w-full divide-y divide-slate-200 relative">
+                        <thead class="bg-slate-50 sticky top-0 shadow-sm z-10">
+                            <tr>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider bg-slate-50">วันที่</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider bg-slate-50">ผู้เบิก (Requester)</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider bg-slate-50">ลูกค้า (Customer)</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider bg-slate-50">Item Code</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider bg-slate-50">Item Desc</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider bg-slate-50">วัตถุประสงค์ (Objective)</th>
+                                <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider bg-slate-50">จำนวน (หน่วย)</th>
+                                <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider bg-slate-50">ยอดเงิน (บาท)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="itemTableBody" class="bg-white divide-y divide-slate-200">
+                            <tr>
+                                <td colspan="8" class="px-6 py-10 text-center text-slate-500">กรุณาอัปโหลดไฟล์ CSV หรือ Excel เพื่อแสดงข้อมูล</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        // Data State
+        let rawData = [];
+        let filteredData = [];
+        
+        // Chart Instances
+        let monthlyChartInstance = null;
+        let yoyChartInstance = null;
+        let qtyPieChartInstance = null;
+        let amountPieChartInstance = null;
+
+        // Choices.js Instances
+        let choiceYear, choiceMonth, choiceDept, choiceRequester, choiceStatus;
+
+        // Colors
+        const colors = [
+            '#3b82f6', '#10b981', '#f43f5e', '#f59e0b', '#8b5cf6', 
+            '#06b6d4', '#ec4899', '#14b8a6', '#f97316', '#6366f1'
+        ];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            Chart.register(ChartDataLabels);
+            initChoices();
+            setupEventListeners();
+        });
+
+        function initChoices() {
+            choiceYear = new Choices('#filterYear', { removeItemButton: true, placeholderValue: 'เลือกปี' });
+            choiceMonth = new Choices('#filterMonth', { removeItemButton: true, placeholderValue: 'เลือกเดือน' });
+            choiceDept = new Choices('#filterDept', { removeItemButton: true, placeholderValue: 'เลือกแผนก' });
+            choiceRequester = new Choices('#filterRequester', { removeItemButton: true, placeholderValue: 'เลือกผู้เบิก' });
+            choiceStatus = new Choices('#filterStatus', { removeItemButton: true, placeholderValue: 'เลือกสถานะ' });
+
+            // On change events
+            document.getElementById('filterYear').addEventListener('change', applyFilters);
+            document.getElementById('filterMonth').addEventListener('change', applyFilters);
+            document.getElementById('filterDept').addEventListener('change', applyFilters);
+            document.getElementById('filterRequester').addEventListener('change', applyFilters);
+            document.getElementById('filterStatus').addEventListener('change', applyFilters);
+        }
+
+        function setupEventListeners() {
+            document.getElementById('csvFileInput').addEventListener('change', handleFileUpload);
+        }
+
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            document.getElementById('lastUpdated').textContent = 'กำลังโหลดข้อมูล...';
+
+            const fileName = file.name.toLowerCase();
+
+            if (fileName.endsWith('.csv')) {
+                Papa.parse(file, {
+                    header: true,
+                    dynamicTyping: true,
+                    skipEmptyLines: true,
+                    complete: function(results) {
+                        processRawData(results.data);
+                        document.getElementById('lastUpdated').textContent = `อัปโหลดสำเร็จ: ${new Date().toLocaleTimeString('th-TH')}`;
+                    },
+                    error: function(err) {
+                        alert('เกิดข้อผิดพลาดในการอ่านไฟล์ CSV ค่ะ');
+                        console.error(err);
+                    }
+                });
+            } else if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        // ใช้ cellDates เพื่อแปลงวันที่ของ Excel เป็น Date Object อัตโนมัติ
+                        const workbook = XLSX.read(data, {type: 'array', cellDates: true}); 
+                        const firstSheetName = workbook.SheetNames[0];
+                        const worksheet = workbook.Sheets[firstSheetName];
+                        const json = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+                        
+                        processRawData(json);
+                        document.getElementById('lastUpdated').textContent = `อัปโหลดสำเร็จ: ${new Date().toLocaleTimeString('th-TH')}`;
+                    } catch (err) {
+                        alert('เกิดข้อผิดพลาดในการอ่านไฟล์ Excel ค่ะ');
+                        console.error(err);
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            } else {
+                alert('ยุพินขออภัยค่ะ ระบบรองรับเฉพาะไฟล์ .csv และ .xlsx นะคะ');
+                document.getElementById('lastUpdated').textContent = 'สถานะ: รออัปโหลดข้อมูลใหม่';
+            }
+        }
+
+        function processRawData(data) {
+            rawData = [];
+            data.forEach(row => {
+                // Extracting fields based on standard sharepoint/excel export structures
+                // Adjusting to find potential column names
+                const dateStr = row['REQUEST_DATE'] || row['ISSUE_DATE'] || row['สร้างเมื่อ'];
+                if (!dateStr) return;
+
+                const dateObj = new Date(dateStr);
+                const year = dateObj.getFullYear().toString();
+                const month = (dateObj.getMonth() + 1).toString().padStart(2, '0');
+                const monthName = dateObj.toLocaleString('th-TH', { month: 'short' });
+                const displayDate = dateObj.toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+                // Try to find Department and Requester
+                let dept = row['REQUESTER_DEPT'] || 'ไม่ระบุ';
+                if (dept === '[List]') dept = 'ไม่ระบุ';
+
+                let requester = row['REQUESTER'] || row['Author'] || row['สร้างโดย'] || 'ไม่ระบุ';
+                if (requester === '[List]' && row['Author']) requester = row['Author'];
+
+                let status = row['STATUS'] || 'ไม่ระบุ';
+                let customerName = row['CUSTOMER_NAME'] || '-';
+
+                // Get Item Details
+                let itemCode = row['ITEM_DESCRIPTION: ITEM_CODE'] || '-';
+                let itemName = row['ITEM_DESCRIPTION: ITEM_NAME'] || '-';
+                let objective = row['OBJECTIVE'] || '-';
+
+                let qty = parseFloat(row['CONFIRM_QTY (KG)'] || 0);
+                let amount = parseFloat(row['AMOUNT (BAHT)'] || 0);
+
+                if(isNaN(qty)) qty = 0;
+                if(isNaN(amount)) amount = 0;
+
+                rawData.push({
+                    rawDate: dateObj,
+                    displayDate: displayDate,
+                    year: year,
+                    monthNum: month,
+                    monthName: `${monthName} ${year.substring(2)}`,
+                    monthKey: `${year}-${month}`, // For sorting
+                    dept: String(dept).trim(),
+                    requester: String(requester).split(';')[0].trim(), // Clean up string
+                    status: String(status).trim(),
+                    customerName: String(customerName).trim(),
+                    itemCode: String(itemCode).trim(),
+                    itemName: String(itemName).trim(),
+                    objective: String(objective).trim(),
+                    qty: qty,
+                    amount: amount
+                });
+            });
+
+            updateFilterOptions();
+            applyFilters();
+        }
+
+        function updateFilterOptions() {
+            const years = [...new Set(rawData.map(d => d.year))].sort();
+            const months = [...new Set(rawData.map(d => d.monthKey))].sort();
+            const depts = [...new Set(rawData.map(d => d.dept))].sort();
+            const requesters = [...new Set(rawData.map(d => d.requester))].sort();
+            const statuses = [...new Set(rawData.map(d => d.status))].sort();
+
+            choiceYear.clearChoices();
+            choiceYear.setChoices(years.map(y => ({ value: y, label: y })), 'value', 'label', true);
+
+            choiceMonth.clearChoices();
+            choiceMonth.setChoices(months.map(m => {
+                const item = rawData.find(d => d.monthKey === m);
+                return { value: m, label: item.monthName };
+            }), 'value', 'label', true);
+
+            choiceDept.clearChoices();
+            choiceDept.setChoices(depts.map(d => ({ value: d, label: d })), 'value', 'label', true);
+
+            choiceRequester.clearChoices();
+            choiceRequester.setChoices(requesters.map(r => ({ value: r, label: r })), 'value', 'label', true);
+
+            choiceStatus.clearChoices();
+            choiceStatus.setChoices(statuses.map(s => ({ value: s, label: s, selected: s.toUpperCase() === 'COMPLETED' })), 'value', 'label', true);
+        }
+
+        function applyFilters() {
+            const selectedYears = Array.from(document.getElementById('filterYear').selectedOptions).map(o => o.value);
+            const selectedMonths = Array.from(document.getElementById('filterMonth').selectedOptions).map(o => o.value);
+            const selectedDepts = Array.from(document.getElementById('filterDept').selectedOptions).map(o => o.value);
+            const selectedRequesters = Array.from(document.getElementById('filterRequester').selectedOptions).map(o => o.value);
+            const selectedStatuses = Array.from(document.getElementById('filterStatus').selectedOptions).map(o => o.value);
+
+            filteredData = rawData.filter(d => {
+                const matchYear = selectedYears.length === 0 || selectedYears.includes(d.year);
+                const matchMonth = selectedMonths.length === 0 || selectedMonths.includes(d.monthKey);
+                const matchDept = selectedDepts.length === 0 || selectedDepts.includes(d.dept);
+                const matchRequester = selectedRequesters.length === 0 || selectedRequesters.includes(d.requester);
+                const matchStatus = selectedStatuses.length === 0 || selectedStatuses.includes(d.status);
+                return matchYear && matchMonth && matchDept && matchRequester && matchStatus;
+            });
+
+            updateDashboard();
+        }
+
+        function updateDashboard() {
+            updateKPIs();
+            renderMonthlyChart();
+            renderYoyChart();
+            renderPieCharts();
+            renderTable();
+            renderItemTable();
+        }
+
+        function updateKPIs() {
+            const breakdownContainer = document.getElementById('kpiYearlyBreakdown');
+            const yearLabel = document.getElementById('kpiYearLabel');
+            breakdownContainer.innerHTML = '';
+            
+            if (filteredData.length === 0) {
+                document.getElementById('kpiMainCount').innerHTML = `0 <span class="text-sm font-normal text-slate-500">รายการ</span>`;
+                document.getElementById('kpiMainQty').innerHTML = `0 <span class="text-sm font-normal text-slate-500">หน่วย</span>`;
+                document.getElementById('kpiMainAmount').innerHTML = `0 <span class="text-sm font-normal text-slate-500">บาท</span>`;
+                breakdownContainer.classList.add('hidden');
+                yearLabel.classList.add('hidden');
+                return;
+            }
+
+            // Calculate Main Totals
+            const totalCount = filteredData.length;
+            const totalQty = filteredData.reduce((sum, d) => sum + d.qty, 0);
+            const totalAmount = filteredData.reduce((sum, d) => sum + d.amount, 0);
+
+            // Update Main UI
+            document.getElementById('kpiMainCount').innerHTML = `${totalCount.toLocaleString()} <span class="text-sm font-normal text-slate-500">รายการ</span>`;
+            document.getElementById('kpiMainQty').innerHTML = `${totalQty.toLocaleString(undefined, {minimumFractionDigits:0, maximumFractionDigits:2})} <span class="text-sm font-normal text-slate-500">หน่วย</span>`;
+            document.getElementById('kpiMainAmount').innerHTML = `${totalAmount.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})} <span class="text-sm font-normal text-slate-500">บาท</span>`;
+
+            // Handle Yearly Breakdown
+            const uniqueYears = [...new Set(filteredData.map(d => d.year))].sort((a, b) => b - a);
+            
+            if (uniqueYears.length > 1) {
+                yearLabel.textContent = `ข้อมูลจาก ${uniqueYears.length} ปี`;
+                yearLabel.classList.remove('hidden');
+                breakdownContainer.classList.remove('hidden');
+                
+                let html = '';
+                uniqueYears.forEach(year => {
+                    const yearData = filteredData.filter(d => d.year === year);
+                    const count = yearData.length;
+                    const qty = yearData.reduce((sum, d) => sum + d.qty, 0);
+                    const amount = yearData.reduce((sum, d) => sum + d.amount, 0);
+                    
+                    html += `
+                        <div class="bg-white rounded-lg p-3 border border-slate-200 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
+                            <div class="flex justify-between items-center border-b border-slate-100 pb-2 mb-2">
+                                <span class="font-semibold text-slate-700">ปี ${year}</span>
+                                <span class="text-xs font-medium bg-blue-50 text-blue-600 px-2 py-0.5 rounded">${count.toLocaleString()} รายการ</span>
+                            </div>
+                            <div class="flex justify-between items-end">
+                                <div class="text-xs text-slate-500">จำนวน:<br><span class="font-medium text-slate-700 text-sm">${qty.toLocaleString(undefined, {minimumFractionDigits:0, maximumFractionDigits:2})}</span></div>
+                                <div class="text-right text-xs text-slate-500">ยอดเงิน:<br><span class="font-semibold text-rose-500 text-sm">${amount.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})} ฿</span></div>
+                            </div>
+                        </div>
+                    `;
+                });
+                breakdownContainer.innerHTML = html;
+            } else {
+                yearLabel.textContent = `ปี ${uniqueYears[0]}`;
+                yearLabel.classList.remove('hidden');
+                breakdownContainer.classList.add('hidden');
+            }
+        }
+
+        function renderMonthlyChart() {
+            // Group by month
+            const grouped = filteredData.reduce((acc, curr) => {
+                if (!acc[curr.monthKey]) {
+                    acc[curr.monthKey] = { label: curr.monthName, qty: 0, amount: 0 };
+                }
+                acc[curr.monthKey].qty += curr.qty;
+                acc[curr.monthKey].amount += curr.amount;
+                return acc;
+            }, {});
+
+            const sortedKeys = Object.keys(grouped).sort();
+            const labels = sortedKeys.map(k => grouped[k].label);
+            const dataQty = sortedKeys.map(k => grouped[k].qty);
+            const dataAmount = sortedKeys.map(k => grouped[k].amount);
+
+            if (monthlyChartInstance) monthlyChartInstance.destroy();
+
+            const ctx = document.getElementById('monthlyChart').getContext('2d');
+            monthlyChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'จำนวน (หน่วย)',
+                            data: dataQty,
+                            backgroundColor: 'rgba(16, 185, 129, 0.8)',
+                            yAxisID: 'y'
+                        },
+                        {
+                            label: 'ยอดเงิน (บาท)',
+                            data: dataAmount,
+                            type: 'line',
+                            borderColor: 'rgba(244, 63, 94, 1)',
+                            backgroundColor: 'rgba(244, 63, 94, 0.2)',
+                            borderWidth: 3,
+                            tension: 0.3,
+                            fill: true,
+                            yAxisID: 'y1'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { position: 'top', labels: { font: { family: 'Kanit' } } },
+                        tooltip: { titleFont: { family: 'Kanit' }, bodyFont: { family: 'Kanit' } },
+                        datalabels: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: { display: true, text: 'จำนวน (หน่วย)', font: { family: 'Kanit' } }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            grid: { drawOnChartArea: false },
+                            title: { display: true, text: 'ยอดเงิน (บาท)', font: { family: 'Kanit' } }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderYoyChart() {
+            if (yoyChartInstance) yoyChartInstance.destroy();
+
+            // สร้าง Label เดือน 12 เดือนสำหรับแกน X
+            const monthLabels = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+            
+            // หาปีทั้งหมดที่มีในข้อมูลที่ถูก Filter
+            const allYears = [...new Set(filteredData.map(d => d.year))].sort();
+            
+            const datasets = allYears.map((yr, idx) => {
+                const dataForYear = new Array(12).fill(0); // สร้าง array 12 ช่อง เริ่มต้นที่ 0
+                
+                filteredData.forEach(d => {
+                    if (d.year === yr) {
+                        const mIdx = parseInt(d.monthNum) - 1; // แปลง 01-12 เป็น index 0-11
+                        dataForYear[mIdx] += d.amount; // รวมยอดเงิน
+                    }
+                });
+                
+                return {
+                    label: `ยอดเงินปี ${yr}`,
+                    data: dataForYear,
+                    borderColor: colors[idx % colors.length],
+                    backgroundColor: colors[idx % colors.length],
+                    borderWidth: 3,
+                    tension: 0.3,
+                    fill: false,
+                    pointRadius: 4,
+                    pointHoverRadius: 6
+                };
+            });
+
+            const ctx = document.getElementById('yoyChart').getContext('2d');
+            yoyChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: monthLabels,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { position: 'top', labels: { font: { family: 'Kanit' } } },
+                        tooltip: { 
+                            titleFont: { family: 'Kanit' }, 
+                            bodyFont: { family: 'Kanit' },
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) { label += ': '; }
+                                    if (context.parsed.y !== null) {
+                                        label += context.parsed.y.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) + ' บาท';
+                                    }
+                                    return label;
+                                }
+                            }
+                        },
+                        datalabels: { display: false } // ซ่อน Data Labels บนกราฟเส้นกันรก
+                    },
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: { display: true, text: 'ยอดเงิน (บาท)', font: { family: 'Kanit' } }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderPieCharts() {
+            // Group by Dept
+            const grouped = filteredData.reduce((acc, curr) => {
+                if (!acc[curr.dept]) acc[curr.dept] = { qty: 0, amount: 0 };
+                acc[curr.dept].qty += curr.qty;
+                acc[curr.dept].amount += curr.amount;
+                return acc;
+            }, {});
+
+            // Sort by amount desc to get top ones
+            const sortedDepts = Object.keys(grouped).sort((a, b) => grouped[b].amount - grouped[a].amount);
+            
+            // Handle too many departments (group into "อื่นๆ")
+            const maxSegments = 8;
+            let finalLabels = [];
+            let finalQty = [];
+            let finalAmount = [];
+
+            if (sortedDepts.length > maxSegments) {
+                finalLabels = sortedDepts.slice(0, maxSegments - 1);
+                finalLabels.push('อื่นๆ');
+                
+                let topQty = finalLabels.slice(0, -1).map(d => grouped[d].qty);
+                let topAmount = finalLabels.slice(0, -1).map(d => grouped[d].amount);
+                
+                let otherQty = sortedDepts.slice(maxSegments - 1).reduce((s, d) => s + grouped[d].qty, 0);
+                let otherAmount = sortedDepts.slice(maxSegments - 1).reduce((s, d) => s + grouped[d].amount, 0);
+                
+                finalQty = [...topQty, otherQty];
+                finalAmount = [...topAmount, otherAmount];
+            } else {
+                finalLabels = sortedDepts;
+                finalQty = sortedDepts.map(d => grouped[d].qty);
+                finalAmount = sortedDepts.map(d => grouped[d].amount);
+            }
+
+            const commonOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'right', labels: { font: { family: 'Kanit', size: 12 }, boxWidth: 12 } },
+                    tooltip: { titleFont: { family: 'Kanit' }, bodyFont: { family: 'Kanit' } },
+                    datalabels: {
+                        color: '#ffffff',
+                        font: { family: 'Kanit', weight: 'bold', size: 12 },
+                        formatter: (value, ctx) => {
+                            let sum = 0;
+                            let dataArr = ctx.chart.data.datasets[0].data;
+                            dataArr.forEach(data => sum += data);
+                            if (sum === 0) return null;
+                            let percentage = (value * 100 / sum).toFixed(1) + "%";
+                            return (value * 100 / sum) > 4 ? percentage : null; // ซ่อนถ้าน้อยกว่า 4%
+                        },
+                        textStrokeColor: 'rgba(0,0,0,0.5)',
+                        textStrokeWidth: 2
+                    }
+                },
+                cutout: '50%'
+            };
+
+            // Qty Chart
+            if (qtyPieChartInstance) qtyPieChartInstance.destroy();
+            qtyPieChartInstance = new Chart(document.getElementById('qtyPieChart').getContext('2d'), {
+                type: 'doughnut',
+                data: { labels: finalLabels, datasets: [{ data: finalQty, backgroundColor: colors, borderWidth: 0 }] },
+                options: commonOptions
+            });
+
+            // Amount Chart
+            if (amountPieChartInstance) amountPieChartInstance.destroy();
+            amountPieChartInstance = new Chart(document.getElementById('amountPieChart').getContext('2d'), {
+                type: 'doughnut',
+                data: { labels: finalLabels, datasets: [{ data: finalAmount, backgroundColor: colors, borderWidth: 0 }] },
+                options: commonOptions
+            });
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+
+            if (filteredData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-10 text-center text-slate-500">ไม่พบข้อมูลที่ตรงกับเงื่อนไข</td></tr>';
+                return;
+            }
+
+            const grouped = filteredData.reduce((acc, curr) => {
+                const key = curr.dept + '|' + curr.requester;
+                if (!acc[key]) acc[key] = { dept: curr.dept, requester: curr.requester, count: 0, qty: 0, amount: 0 };
+                acc[key].count += 1;
+                acc[key].qty += curr.qty;
+                acc[key].amount += curr.amount;
+                return acc;
+            }, {});
+
+            const sortedKeys = Object.keys(grouped).sort((a, b) => grouped[b].amount - grouped[a].amount);
+
+            sortedKeys.forEach(key => {
+                const d = grouped[key];
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50 transition-colors';
+                tr.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-800">${d.dept}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600">${d.requester}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600 text-right">${d.count.toLocaleString()}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600 text-right">${d.qty.toLocaleString(undefined, {minimumFractionDigits:0, maximumFractionDigits:2})}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-rose-500 text-right">${d.amount.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderItemTable() {
+            const tbody = document.getElementById('itemTableBody');
+            tbody.innerHTML = '';
+
+            if (filteredData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="px-6 py-10 text-center text-slate-500">ไม่พบข้อมูลที่ตรงกับเงื่อนไข</td></tr>';
+                return;
+            }
+
+            const fragment = document.createDocumentFragment();
+            filteredData.forEach(d => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50 transition-colors';
+                tr.innerHTML = `
+                    <td class="px-6 py-3 whitespace-nowrap text-sm text-slate-600">${d.displayDate}</td>
+                    <td class="px-6 py-3 whitespace-nowrap text-sm font-medium text-slate-800">${d.requester}</td>
+                    <td class="px-6 py-3 text-sm text-slate-600 max-w-xs truncate" title="${d.customerName}">${d.customerName}</td>
+                    <td class="px-6 py-3 whitespace-nowrap text-sm font-medium text-slate-800">${d.itemCode}</td>
+                    <td class="px-6 py-3 text-sm text-slate-600 max-w-xs truncate" title="${d.itemName}">${d.itemName}</td>
+                    <td class="px-6 py-3 text-sm text-slate-600 max-w-sm truncate" title="${d.objective}">${d.objective}</td>
+                    <td class="px-6 py-3 whitespace-nowrap text-sm text-slate-600 text-right">${d.qty.toLocaleString(undefined, {minimumFractionDigits:0, maximumFractionDigits:2})}</td>
+                    <td class="px-6 py-3 whitespace-nowrap text-sm font-semibold text-rose-500 text-right">${d.amount.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
+                `;
+                fragment.appendChild(tr);
+            });
+            tbody.appendChild(fragment);
+        }
+    </script>
+</body>
+</html>
